@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bubble Sort Demo</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f5f7fb;
+        color: #18212f;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+      }
+
+      main {
+        width: min(920px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 48px 0;
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: clamp(2rem, 5vw, 4rem);
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0;
+        color: #526070;
+        line-height: 1.6;
+      }
+
+      .panel {
+        margin-top: 28px;
+        border: 1px solid #dce3ee;
+        border-radius: 8px;
+        background: #ffffff;
+        box-shadow: 0 18px 50px rgba(24, 33, 47, 0.08);
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        padding: 18px;
+        border-bottom: 1px solid #e7ecf3;
+      }
+
+      input {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+        border: 1px solid #cfd8e6;
+        border-radius: 6px;
+        padding: 12px 14px;
+        font: inherit;
+      }
+
+      button {
+        border: 0;
+        border-radius: 6px;
+        padding: 0 18px;
+        min-height: 46px;
+        font: inherit;
+        font-weight: 700;
+        color: #ffffff;
+        background: #176b87;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #12566c;
+      }
+
+      .output {
+        padding: 18px;
+      }
+
+      .result {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 14px 0 22px;
+      }
+
+      .number {
+        min-width: 42px;
+        padding: 10px 12px;
+        border-radius: 6px;
+        text-align: center;
+        font-weight: 800;
+        background: #eaf4f4;
+        color: #16363b;
+      }
+
+      .steps {
+        display: grid;
+        gap: 10px;
+      }
+
+      .step {
+        border: 1px solid #e1e7f0;
+        border-radius: 8px;
+        padding: 12px;
+        background: #fbfcfe;
+      }
+
+      .step strong {
+        color: #1f3445;
+      }
+
+      .error {
+        color: #b42318;
+        font-weight: 700;
+      }
+
+      @media (max-width: 620px) {
+        main {
+          padding-top: 28px;
+        }
+
+        .controls {
+          grid-template-columns: 1fr;
+        }
+
+        button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Bubble Sort</h1>
+      <p>Enter comma-separated numbers and watch the list settle into order, one comparison at a time.</p>
+
+      <section class="panel" aria-label="Bubble sort demo">
+        <div class="controls">
+          <input id="numbers" value="5, 3, 8, 1, 2" aria-label="Numbers to sort" />
+          <button id="sortButton" type="button">Sort</button>
+        </div>
+        <div class="output">
+          <p id="message"></p>
+          <div id="result" class="result" aria-live="polite"></div>
+          <div id="steps" class="steps"></div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const input = document.querySelector("#numbers");
+      const sortButton = document.querySelector("#sortButton");
+      const message = document.querySelector("#message");
+      const result = document.querySelector("#result");
+      const steps = document.querySelector("#steps");
+
+      function renderNumbers(container, numbers) {
+        container.innerHTML = "";
+        for (const number of numbers) {
+          const chip = document.createElement("span");
+          chip.className = "number";
+          chip.textContent = Number.isInteger(number) ? number : number.toFixed(2);
+          container.appendChild(chip);
+        }
+      }
+
+      async function sortNumbers() {
+        const numbers = input.value
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean);
+
+        message.textContent = "";
+        message.className = "";
+        result.innerHTML = "";
+        steps.innerHTML = "";
+
+        const response = await fetch("/api/sort", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ numbers }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          message.textContent = data.error || "Unable to sort the input.";
+          message.className = "error";
+          return;
+        }
+
+        message.textContent = "Sorted result";
+        renderNumbers(result, data.sorted);
+
+        for (const step of data.steps) {
+          const row = document.createElement("div");
+          row.className = "step";
+          row.innerHTML = `<strong>Pass ${step.pass}</strong> compared positions ${step.compared.join(" and ")}: ${step.action}`;
+          const snapshot = document.createElement("div");
+          snapshot.className = "result";
+          renderNumbers(snapshot, step.array);
+          row.appendChild(snapshot);
+          steps.appendChild(row);
+        }
+      }
+
+      sortButton.addEventListener("click", sortNumbers);
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          sortNumbers();
+        }
+      });
+    </script>
+  </body>
+</html>
